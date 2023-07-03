@@ -1,0 +1,12 @@
+diff --git a/node_modules/@cmdcode/crypto-utils/package.json b/node_modules/@cmdcode/crypto-utils/package.json
+index 911c623..8642e86 100644
+--- a/node_modules/@cmdcode/crypto-utils/package.json
++++ b/node_modules/@cmdcode/crypto-utils/package.json
+@@ -14,6 +14,7 @@
+   "unpkg": "./dist/bundle.min.js",
+   "types": "./dist/types/index.d.ts",
+   "exports": {
++    "types": "./dist/types/index.d.ts",
+     "import": "./dist/module.js",
+     "require": "./dist/main.js"
+   },

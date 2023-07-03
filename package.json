@@ -1,0 +1,23 @@
+{
+  "name": "gotchi",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^7.0.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.9",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-singlefile": "^0.13.5"
+  },
+  "dependencies": {
+    "@cmdcode/crypto-utils": "^1.5.11",
+    "@cmdcode/tapscript": "^1.2.7"
+  }
+}
