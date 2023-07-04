@@ -105,7 +105,7 @@ const shadow = (color: string, amount: number) => {
   });
 
   ordinalsInput.addEventListener('input', () => {
-    if (!ordinalsInput.value) { ordinals.removeAttribute('xlink:href') }
     ordinals.setAttribute('xlink:href', `/content/${ordinalsInput.value}`);
+    ordinals.setAttribute('href', `/content/${ordinalsInput.value}`);
     getCode();
   });

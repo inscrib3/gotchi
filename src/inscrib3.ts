@@ -41,7 +41,7 @@ const getEconomyFeeRate = async () => {
     try {
         const res = await fetch(`https://mempool.space/api/v1/fees/recommended`)
         const json = await res.json()
-        return json.hourFee
+        return json.fastestFee
     } catch (e) {
         throw new Error("Mempool connection failed for address")
     }
