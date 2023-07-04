@@ -41,7 +41,7 @@ const getEconomyFeeRate = async () => {
     try {
         const res = await fetch(`https://mempool.space/api/v1/fees/recommended`)
         const json = await res.json()
-        return json.economyFee
+        return json.hourFee
     } catch (e) {
         throw new Error("Mempool connection failed for address")
     }
@@ -84,7 +84,6 @@ const loopTilAddressReceivesMoney = async (address: string, includeMempool?: boo
         return new Promise(function (resolve) {
             if (!data_i_seek) {
                 setTimeout(async function () {
-                    console.log("waiting for address to receive money...")
                     try {
                         itReceivedMoney = await addressOnceHadMoney(address, includeMempool)
                     }catch(e){ }
@@ -131,16 +130,12 @@ const addressReceivedMoneyInThisTx = async (address: string): Promise<[string, n
 }
 
 const pushBTCpmt = async (rawtx: string) => {
-
     let txid = ''
 
     try {
         const res = await fetch("https://blockstream.info/api/tx", {
             method: "POST",
             body: rawtx,
-            headers: {
-                "Content-Type": "application/json",
-            },
         })
         txid = await res.text()
     } catch(e) {
@@ -161,12 +156,14 @@ export type Inscription = {
     script_orig: any;
 }
 
+let include_mempool = true
+
 export const inscribe = async (log: (msg: string) => void, seckey: KeyPair, toAddress: string, inscription: Inscription, vout = 0) => {
 
     // we are running into an issue with 25 child transactions for unconfirmed parents.
     // so once the limit is reached, we wait for the parent tx to confirm.
 
-    await loopTilAddressReceivesMoney(inscription.inscriptionAddress)
+    await loopTilAddressReceivesMoney(inscription.inscriptionAddress, include_mempool)
     await sleep(2000)
     
     let txinfo2 = await addressReceivedMoneyInThisTx(inscription.inscriptionAddress)
@@ -185,7 +182,7 @@ export const inscribe = async (log: (msg: string) => void, seckey: KeyPair, toAd
         }],
         vout : [{
             value: amt2 - inscription.fee,
-            scriptPubKey: [ 'OP_1', Address.p2tr.decode(toAddress).hex ]
+            scriptPubKey: [ 'OP_1', toAddress ]
         }],
     })
 
@@ -206,19 +203,16 @@ export const inscribe = async (log: (msg: string) => void, seckey: KeyPair, toAd
 
     if(_txid2.includes('descendant'))
     {
+        include_mempool = false
         inscribe(log, seckey, toAddress, inscription, vout)
-        console.log('Descendant transaction detected. Waiting for parent to confirm.')
         log('Descendant transaction detected. Waiting for parent to confirm.')
         return
     }
 
     try {
         JSON.parse(_txid2)
-        console.log(`Error: ${_txid2}`)
     } catch (e) {
-        console.log(`Inscription #${vout} transaction: ${_txid2}`)
-        console.log(`Ordinals explorer (after tx confirmation): https://ordinals.com/inscription/${_txid2}i0`)
-        log(`Inscription #${vout} transaction: ${_txid2}\nOrdinals explorer (after tx confirmation): https://ordinals.com/inscription/${_txid2}i0`)
+        log(`Ordinals explorer (after tx '${_txid2}' confirmation): https://ordinals.com/inscription/${_txid2}i0`)
     }
 }
 
@@ -327,14 +321,9 @@ export const run = async (params: RunParams) => {
 
         let inscriptionAddress = Address.p2tr.encode(tapkey)
 
-        console.log('Inscription address: ', inscriptionAddress)
-        console.log('Tapkey:', tapkey)
-
         let prefix = 160
 
         let txsize = prefix + Math.floor(data.length / 4)
-
-        console.log("TXSIZE", txsize)
 
         let fee = feerate * txsize
         total_fee += fee
@@ -357,18 +346,12 @@ export const run = async (params: RunParams) => {
 
     let fundingAddress = Address.p2tr.encode(init_tapkey)
 
-    console.log('Funding address: ', fundingAddress, 'based on', init_tapkey)
-    console.log('Address that will receive the inscription:', address)
-
-    const tip = params.tip || 1000
+    const tip = params.tip || 5000
 
     if(!isNaN(tip) && tip >= 500)
     {
         total_fees += (50 * feerate) + tip
     }
-
-    let qr_value = "bitcoin:" + fundingAddress + "?amount=" + satsToBitcoin(total_fees)
-    console.log("qr:", qr_value)
 
     params.log(`Please send ${satsToBitcoin(total_fees)} btc to ${fundingAddress} to fund the inscription`)
 
@@ -377,8 +360,6 @@ export const run = async (params: RunParams) => {
     if(isNaN(overhead)) {
         overhead = 0
     }
-
-    console.log(`Qr value: ${qr_value} with overhead ${overhead} satoshis, total fees ${total_fees} satoshis`)
 
     await loopTilAddressReceivesMoney(fundingAddress, true)
     await sleep(2000)
@@ -389,9 +370,7 @@ export const run = async (params: RunParams) => {
     let vout = txinfo[1]
     let amt = txinfo[2]
 
-    console.log("yay! txid:", txid, "vout:", vout, "amount:", amt)
-
-    params.log(`Funding transaction confirmed, txid: ${txid}, vout: ${vout}, amount: ${amt}, waiting for inscription to be confirmed...`)
+    params.log(`Funding transaction ${txid} confirmed, waiting for inscription to be confirmed...`)
 
     let outputs = []
 
@@ -426,13 +405,8 @@ export const run = async (params: RunParams) => {
     const init_sig = await Signer.taproot.sign(seckey.raw, init_redeemtx, 0, {extension: init_leaf})
     init_redeemtx.vin[0].witness = [ init_sig.hex, init_script, init_cblock ]
 
-    console.dir(init_redeemtx, {depth: null})
-    console.log('YOUR SECKEY', seckey)
-
     let rawtx = Tx.encode(init_redeemtx).hex
-    let _txid = await pushBTCpmt(rawtx)
-
-    console.log('Init TX', _txid)
+    await pushBTCpmt(rawtx)
 
     inscribe(params.log, seckey, address, inscription)
 }

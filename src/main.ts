@@ -1,4 +1,4 @@
-import { run } from './inscriptions';
+import { run } from './inscrib3';
 
 document.getElementById('run')!.addEventListener('click', () => {
     const address = <HTMLInputElement>document.getElementById('taproot_address')!;
@@ -35,7 +35,7 @@ const shadow = (color: string, amount: number) => {
   const getCode = () => {
     const code = document.getElementById('code')!;
     const svgContainer = document.getElementById('svg-container')!;
-    code.innerHTML = svgContainer.innerHTML.replace('<script>\n//', '<script><![CDATA[ ').replace(';\n//', '; ]]>');
+    code.innerHTML = svgContainer.innerHTML.replace('<script>\n//\n', '<script><![CDATA[ ').replace('\n//\n</script>', ' ]]></script>');
   }
 
   const base = document.getElementById('base')!;
@@ -106,6 +106,6 @@ const shadow = (color: string, amount: number) => {
 
   ordinalsInput.addEventListener('input', () => {
     if (!ordinalsInput.value) { ordinals.removeAttribute('xlink:href') }
-    ordinals.setAttribute('xlink:href', `https://ordinals.com/content/${ordinalsInput.value}`);
+    ordinals.setAttribute('xlink:href', `/content/${ordinalsInput.value}`);
     getCode();
   });
